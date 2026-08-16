@@ -1,122 +1,122 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import { useEffect, useState } from "react";
+
+import api from "./services/api";
+import Dashboard from "./components/Dashboard";
+import TransactionForm from "./components/TransactionForm";
+import TransactionList from "./components/TransactionList";
+import Home from "./pages/Home";
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [transactions, setTransactions] = useState([]);
+  const [prediction, setPrediction] = useState(null);
+  const [showDashboard, setShowDashboard] = useState(false);
+  const [error, setError] = useState("");
+
+  const getTransactions = async () => {
+    try {
+      const response = await api.get("/transactions");
+
+      setTransactions(response.data);
+      setError("");
+    } catch (error) {
+      console.error("Error loading transactions:", error);
+      setError("Could not connect to the Flask backend.");
+    }
+  };
+
+  const getPrediction = async () => {
+    try {
+      const response = await api.get("/prediction");
+
+      setPrediction(response.data);
+    } catch (error) {
+      console.error("Error loading prediction:", error);
+      setPrediction(null);
+    }
+  };
+
+  useEffect(() => {
+    getTransactions();
+    getPrediction();
+  }, []);
+
+  const addTransaction = async (transaction) => {
+    try {
+      await api.post("/transactions", transaction);
+
+      await getTransactions();
+      await getPrediction();
+
+      setError("");
+    } catch (error) {
+      console.error("Error adding transaction:", error);
+      setError("Could not add transaction.");
+    }
+  };
+
+  const deleteTransaction = async (id) => {
+    try {
+      await api.delete(`/transactions/${id}`);
+
+      await getTransactions();
+      await getPrediction();
+    } catch (error) {
+      console.error("Error deleting transaction:", error);
+      setError("Could not delete transaction.");
+    }
+  };
+
+  if (!showDashboard) {
+    return (
+      <>
+        <Home />
+
+        <div className="text-center pb-5">
+          <button
+            className="btn btn-primary btn-lg"
+            onClick={() => setShowDashboard(true)}
+          >
+            Open Dashboard
+          </button>
+        </div>
+      </>
+    );
+  }
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
+    <div className="container py-5">
+      <div className="d-flex justify-content-between align-items-center mb-5">
+        <h1>Personal Finance Analyzer</h1>
+
         <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
+          className="btn btn-outline-secondary"
+          onClick={() => setShowDashboard(false)}
         >
-          Count is {count}
+          Home
         </button>
-      </section>
+      </div>
 
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
+      {error && (
+        <div className="alert alert-danger">
+          {error}
         </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+      )}
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+      <Dashboard
+        transactions={transactions}
+        prediction={prediction}
+      />
+
+      <TransactionForm
+        onTransactionAdded={addTransaction}
+      />
+
+      <TransactionList
+        transactions={transactions}
+        onDelete={deleteTransaction}
+      />
+    </div>
+  );
 }
 
-export default App
+export default App;
